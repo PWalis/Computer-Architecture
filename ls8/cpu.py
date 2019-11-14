@@ -6,23 +6,25 @@ ldi = 0b10000010
 prn = 0b01000111
 hlt = 0b00000001
 mul = 0b10100010
+add = 0b10100000
 push = 0b01000101
 pop = 0b01000110
+call = 0b01010000
+ret = 0b00010001
 
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        self.branchtable = {ldi:self.ldi, prn:self.prn, hlt:self.hlt, mul:self.mul, push:self.push, pop:self.pop}
+        self.branchtable = {ldi:self.ldi, prn:self.prn, hlt:self.hlt, mul:self.mul, push:self.push,
+                            pop:self.pop, call:self.call, ret:self.ret, add:self.add}
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
         # Stack pointer at r7
         self.reg[7] = 0xF3
         self.sp = self.reg[7]
-
-
 
     def load(self, progname):
         """Load a program into memory."""
@@ -125,6 +127,16 @@ class CPU:
         self.alu('MUL', mar_0, mar_1)
         self.pc += 1
 
+    def add(self):
+        self.pc += 1
+        mar_0 = self.read_ram(self.pc)
+        # print(mar)
+        self.pc += 1
+        mar_1 = self.read_ram(self.pc)
+        # print(mdr)
+        self.alu('ADD', mar_0, mar_1)
+        self.pc += 1
+
     def push(self):
         self.pc += 1
         mar = self.ram[self.pc]
@@ -139,16 +151,34 @@ class CPU:
         self.sp += 1
         self.pc += 1
 
+    def call(self):
+        # print(f'stack pointer{self.sp}')
+        self.sp -= 1
+        # print(f'stack pointer after{self.sp}')
+        self.ram[self.sp] = self.pc + 2
+        # print(f'Call: pc{self.pc}')
+        self.pc = self.reg[self.ram[self.pc + 1]]
+        
+
+    def ret(self):
+        # print(f'stack pointer ret {self.sp}')
+        self.pc = self.ram[self.sp]
+        self.sp += 1
+
     def run(self):
         """Run the CPU."""
+        # print(f'Ram: {self.ram[:30]}\nReg: {self.reg}\nStack: {self.ram[230:241]}')
         while True:
             ir = self.read_ram(self.pc)
+            # print(f'IR: {ir}\nPC: {self.pc}')
             
             if ir in self.branchtable:
                 # print(ir)
                 self.branchtable[ir]()
+
             else:
-                print(f'Instruction not found [{ir}]')
+                print(f'Ram: {self.ram[:30]}\nReg: {self.reg}\nStack: {self.ram[241:244]}')
+                print(f'Instruction not found [{ir}]\nPC: [{self.pc}]')
                 sys.exit()
         
 
